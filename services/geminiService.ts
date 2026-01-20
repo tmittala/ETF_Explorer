@@ -1,95 +1,95 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { ETFData } from "../types";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
-export const fetchETFAnalysis = async (ticker: string): Promise<ETFData> => {
-  const ai = getAI();
-  // Switching to 'gemini-3-flash-preview' for maximum speed/low latency
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `Fast analysis for ETF: ${ticker}. Provide:
-    1. Current market price (estimate if live unavailable).
-    2. YTD, 3m, 6m, 1y yields (numeric strings).
-    3. Top 5-10 holdings.
-    4. 2-line investment strategy summary.
-    
-    Return JSON only.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          ticker: { type: Type.STRING },
-          summary: { type: Type.STRING },
-          sector: { type: Type.STRING },
-          currentPrice: { type: Type.STRING },
-          performance: {
-            type: Type.OBJECT,
-            properties: {
-              ytd: { type: Type.STRING },
-              threeMonth: { type: Type.STRING },
-              sixMonth: { type: Type.STRING },
-              oneYear: { type: Type.STRING }
-            },
-            required: ["ytd", "threeMonth", "sixMonth", "oneYear"]
-          },
-          holdings: { 
-            type: Type.ARRAY, 
-            items: { 
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                percentage: { type: Type.STRING }
-              },
-              required: ["name", "percentage"]
-            } 
-          },
-          alternatives: { 
-            type: Type.ARRAY, 
-            items: { 
-              type: Type.OBJECT,
-              properties: {
-                ticker: { type: Type.STRING },
-                price: { type: Type.STRING }
-              },
-              required: ["ticker", "price"]
-            } 
-          }
-        },
-        required: ["ticker", "summary", "sector", "currentPrice", "performance", "holdings", "alternatives"]
-      }
-    }
-  });
-
-  return JSON.parse(response.text);
+/**
+ * API Key retrieval with fallback for common local dev environments.
+ */
+const getApiKey = () => {
+  let key = '';
+  try {
+    key = (typeof process !== 'undefined' && process.env?.API_KEY) || 
+          (typeof (import.meta as any).env !== 'undefined' && (import.meta as any).env.VITE_API_KEY) ||
+          (typeof process !== 'undefined' && (process.env as any).REACT_APP_API_KEY) || 
+          '';
+  } catch (e) {
+    console.warn("Gemini Service: Error accessing environment variables:", e);
+  }
+  return key;
 };
 
-export const generateETFVisual = async (prompt: string, size: '1K' | '2K' | '4K'): Promise<string | null> => {
-  const ai = getAI();
+const getAI = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING: No API Key found. Please add API_KEY to your .env file and restart your server.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+export const fetchETFAnalysis = async (ticker: string): Promise<ETFData> => {
   try {
+    const ai = getAI();
+    
+    // NOTE: When using Google Search tool, we cannot use responseMimeType: "application/json".
+    // We must prompt for JSON and parse it manually.
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-image-preview',
-      contents: {
-        parts: [{ text: `A clean, minimalist, Apple-style 3D conceptual visual representing the investment strategy: ${prompt}. High-end commercial photography style.` }]
-      },
+      model: 'gemini-flash-lite-latest',
+      contents: `Analyze the ETF ticker: ${ticker}. 
+      Use Google Search to find current price, top 5 holdings, and returns (YTD, 3m, 6m, 1y).
+      
+      Return ONLY a raw JSON object (no markdown, no code blocks) matching this structure:
+      {
+        "ticker": string,
+        "summary": string,
+        "sector": string,
+        "currentPrice": string,
+        "performance": { "ytd": string, "threeMonth": string, "sixMonth": string, "oneYear": string },
+        "holdings": [{ "name": string, "percentage": string }],
+        "alternatives": [{ "ticker": string, "price": string }]
+      }`,
       config: {
-        imageConfig: {
-          aspectRatio: "16:9",
-          imageSize: size
-        }
+        tools: [{ googleSearch: {} }]
       }
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
+    if (!response.text) throw new Error("EMPTY_AI_RESPONSE");
+    
+    // Clean up response text in case the model ignored instructions and added markdown backticks
+    let cleanText = response.text.trim();
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
     }
-    return null;
+
+    try {
+      return JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error("JSON Parse Error. Raw content:", cleanText);
+      throw new Error("Failed to parse AI response into market data.");
+    }
+
+  } catch (error: any) {
+    console.error("ETF Analysis Error:", error);
+    throw error;
+  }
+};
+
+export const generateETFVisual = async (prompt: string, size: '1K' | '2K' | '4K'): Promise<string | null> => {
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: `Minimalist 3D financial visualization for: ${prompt}` }]
+      },
+      config: {
+        imageConfig: { aspectRatio: "16:9", imageSize: size }
+      }
+    });
+
+    const imgPart = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    return imgPart ? `data:image/png;base64,${imgPart.inlineData.data}` : null;
   } catch (error) {
-    console.error("Image generation failed", error);
+    console.error("Image Gen Error:", error);
     return null;
   }
 };

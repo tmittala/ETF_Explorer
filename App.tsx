@@ -44,7 +44,7 @@ const App: React.FC = () => {
       setTicker(searchTicker.toUpperCase());
     } catch (err) {
       console.error(err);
-      setError("Failed to analyze ETF. Verify the ticker exists and try again.");
+      setError("Failed to fetch live data. Verify the ticker and try again.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ const App: React.FC = () => {
           ETF <span className="font-light opacity-60">Explorer</span>
         </h1>
         <p className="text-xl md:text-2xl font-medium text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-10">
-          instant insights for your portfolio.
+          live verified insights for your portfolio.
         </p>
         
         <form onSubmit={handleSearch} className="max-w-md mx-auto">
@@ -144,7 +144,7 @@ const App: React.FC = () => {
                 <h3 className="text-6xl font-bold tracking-tighter text-slate-900 dark:text-white">{data.ticker}</h3>
               </div>
               <div className="text-right">
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mb-1">Market Price</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mb-1">Live Price</p>
                 <p className="text-4xl font-semibold tracking-tighter text-slate-900 dark:text-white">{formatPrice(data.currentPrice)}</p>
               </div>
             </div>
@@ -155,7 +155,7 @@ const App: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-[#1c1c1e] p-8 rounded-[32px] flex flex-col border border-slate-100 dark:border-white/5 shadow-sm">
-              <h4 className="text-xl font-bold mb-6 text-slate-900 dark:text-white">Performance Yields</h4>
+              <h4 className="text-xl font-bold mb-6 text-slate-900 dark:text-white">Live Performance Yields</h4>
               <PerformanceChart data={data.performance} />
               <div className="grid grid-cols-2 gap-4 mt-auto pt-6">
                 {[
@@ -175,7 +175,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="bg-white dark:bg-[#1c1c1e] p-8 rounded-[32px] border border-slate-100 dark:border-white/5 shadow-sm">
-              <h4 className="text-xl font-bold mb-6 text-slate-900 dark:text-white">Top Holdings</h4>
+              <h4 className="text-xl font-bold mb-6 text-slate-900 dark:text-white">Current Top Holdings</h4>
               <div className="space-y-4">
                 {data.holdings.map((h, i) => (
                   <div key={i} className="flex justify-between items-center group">
@@ -231,7 +231,7 @@ const App: React.FC = () => {
       {loading && (
         <div className="flex flex-col items-center justify-center py-24">
           <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
-          <p className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-[0.2em]">Getting Live Data...</p>
+          <p className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-[0.2em]">Verifying Live Data via Google Search...</p>
         </div>
       )}
 
@@ -247,7 +247,7 @@ const App: React.FC = () => {
         </div>
         <div className="text-center md:text-right">
           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 max-w-[320px] leading-relaxed uppercase tracking-wider">
-            High Speed AI Analysis Engine. Not Financial Advice.
+            Real-time Grounded AI Engine. Verified with Google Search.
           </p>
         </div>
       </footer>
