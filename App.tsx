@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { fetchETFAnalysis, generateETFVisual } from './services/geminiService';
 import { ETFData, ImageSize } from './types';
 import { PerformanceChart } from './components/PerformanceChart';
@@ -253,6 +254,7 @@ const App: React.FC = () => {
       </footer>
 
       <ChatBot />
+      <Analytics />
     </div>
   );
 };
